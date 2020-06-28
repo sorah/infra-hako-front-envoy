@@ -1,0 +1,58 @@
+name: docker-build
+on: 
+  schedule:
+    - cron: '12 15 2,12,22 * *'
+  push:
+    branches:
+      - master
+
+env:
+  DOCKER_REPO: 'sorah/infra-hako-front-envoy'
+  ALT_DOCKER_REPO: 'gcr.io/${{ secrets.GCP_PROJECT }}/infra-hako-front-envoy'
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - run: 'echo $GITHUB_SHA > REVISION'
+
+      - run: |
+          mkdir -p ~/.docker
+          echo '{"experimental": "enabled"}' > ~/.docker/config.json
+          sudo docker run --rm --privileged multiarch/qemu-user-static --reset --persistent yes --credential yes
+
+      - name: login-dockerhub
+        run: "echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u sorah --password-stdin"
+      - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT }}
+      - run: 'gcloud --quiet auth configure-docker'
+
+      - run: "docker pull ${ALT_DOCKER_REPO}:latest-amd64 || :"
+      - run: "docker pull ${ALT_DOCKER_REPO}:latest-arm64 || :"
+
+      - run: "docker build --pull --platform linux/amd64 --cache-from ${ALT_DOCKER_REPO}:latest-amd64 --cache-from ${DOCKER_REPO}:latest-amd64 -t ${DOCKER_REPO}:${GITHUB_SHA}-amd64 -f Dockerfile ."
+      - run: "docker build --pull --platform linux/arm64 --cache-from ${ALT_DOCKER_REPO}:latest-arm64 --cache-from ${DOCKER_REPO}:latest-arm64 -t ${DOCKER_REPO}:${GITHUB_SHA}-arm64 -f Dockerfile ."
+
+      - name: docker-push
+        run: |
+          set -x
+          docker tag ${DOCKER_REPO}:${GITHUB_SHA}-amd64 ${ALT_DOCKER_REPO}:${GITHUB_SHA}-amd64
+          docker tag ${DOCKER_REPO}:${GITHUB_SHA}-arm64 ${ALT_DOCKER_REPO}:${GITHUB_SHA}-arm64
+          docker push ${DOCKER_REPO}:${GITHUB_SHA}-amd64
+          docker push ${DOCKER_REPO}:${GITHUB_SHA}-arm64
+          docker push ${ALT_DOCKER_REPO}:${GITHUB_SHA}-amd64
+          docker push ${ALT_DOCKER_REPO}:${GITHUB_SHA}-arm64
+
+      - name: docker-manifest-push
+        run: |
+          set -x
+          for repo in ${DOCKER_REPO} ${ALT_DOCKER_REPO}; do
+            docker manifest create --amend ${repo}:${GITHUB_SHA} ${repo}:${GITHUB_SHA}-amd64 ${repo}:${GITHUB_SHA}-arm64
+            docker manifest push ${repo}:${GITHUB_SHA}
+            docker manifest create --amend ${repo}:latest ${repo}:${GITHUB_SHA}-amd64 ${repo}:${GITHUB_SHA}-arm64
+            docker manifest push ${repo}:latest
+          done

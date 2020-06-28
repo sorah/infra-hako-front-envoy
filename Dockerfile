@@ -1,0 +1,10 @@
+FROM envoyproxy/envoy:v1.14-latest
+
+COPY run.sh /run_v2.sh
+COPY config.yml /config.yml
+
+# for fault injection
+RUN mkdir -p /srv/runtime/current/envoy
+RUN mkdir -p /srv/runtime/current/envoy_override
+
+CMD ["/run.sh"]

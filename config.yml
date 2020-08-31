@@ -58,6 +58,7 @@ static_resources:
       type: STATIC
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
+      ||HTTP2||
       load_assignment:
         cluster_name: backend_service
         endpoints:

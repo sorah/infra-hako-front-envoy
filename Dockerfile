@@ -1,6 +1,6 @@
 FROM envoyproxy/envoy:v1.15-latest
 
-COPY run.sh /run_v2.sh
+COPY run.sh /run.sh
 COPY config.yml /config.yml
 
 # for fault injection

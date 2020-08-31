@@ -1,4 +1,4 @@
-FROM envoyproxy/envoy:v1.14-latest
+FROM envoyproxy/envoy:v1.15-latest
 
 COPY run.sh /run_v2.sh
 COPY config.yml /config.yml

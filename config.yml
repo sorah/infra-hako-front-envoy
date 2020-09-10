@@ -53,6 +53,7 @@ static_resources:
                         request_id: "%REQ(X-REQUEST-ID)%"
                         authority: "%REQ(:AUTHORITY)%"
                         upstream_host: "%UPSTREAM_HOST%"
+          //TLS//
   clusters:
     - name: backend_service
       type: STATIC

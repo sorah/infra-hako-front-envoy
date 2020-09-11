@@ -19,7 +19,7 @@ else
 fi
 
 if [[ -n "${HTTP2}" ]]; then
-  sed -i -e "s/||HTTP2||/http2_protocol_options: {}/g" /work/config.yaml
+  sed -i -e "s/||HTTP2||/http2_protocol_options: {max_concurrent_streams: ${HTTP2_MAX_CONCURRENT_STREAMS:-2147483647}}/g" /work/config.yaml
 else
   sed -i -e "s/||HTTP2||//g" /work/config.yaml
 fi
